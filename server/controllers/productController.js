@@ -2,6 +2,50 @@ const asyncHandler = require("express-async-handler")
 const Product = require("../models/productModel.js")
 const { synchronizeProductRelations } = require("../utils/productUtills.js")
 const awsService = require("../utils/aws")
+const { map } = require("lodash")
+
+const blankImgArray = [
+  {
+    url: "",
+    key: "",
+  },
+  {
+    url: "",
+    key: "",
+  },
+  {
+    url: "",
+    key: "",
+  },
+  {
+    url: "",
+    key: "",
+  },
+  {
+    url: "",
+    key: "",
+  },
+  {
+    url: "",
+    key: "",
+  },
+  {
+    url: "",
+    key: "",
+  },
+  {
+    url: "",
+    key: "",
+  },
+  {
+    url: "",
+    key: "",
+  },
+  {
+    url: "",
+    key: "",
+  },
+]
 
 // @desc    Fetch all products
 // @route   GET /api/products
@@ -40,9 +84,9 @@ const getProducts = asyncHandler(async (req, res) => {
 // @access  Public
 const getProductById = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id)
-    .populate("otherFlavour.value", "flavour")
-    .populate("otherUnit.value", "unit")
-    .populate("otherColor.value", "color")
+    .populate("otherFlavour.value", ["flavour", "image", "name"])
+    .populate("otherUnit.value", ["unit", "image", "name"])
+    .populate("otherColor.value", ["color", "image", "name"])
 
   if (product) {
     res.status(200).json(product)
@@ -82,25 +126,37 @@ const createProduct = asyncHandler(async (req, res) => {
         return { key, url }
       })
   )
+  const finalImgArr = [...image, ...blankImgArray]
+  finalImgArr.splice(10, image.length)
   req.body.otherUnit = JSON.parse(otherUnit)
   req.body.otherColor = JSON.parse(otherColor)
   req.body.otherFlavour = JSON.parse(otherFlavour)
   req.body.suggestedProduct = JSON.parse(suggestedProduct)
-  req.body.image = image
+  req.body.image = finalImgArr
   req.body.user = req.user._id
 
   const product = new Product(req.body)
 
-  const { _id } = await product.save()
+  const { _id, name } = await product.save()
+  const val = {
+    value: _id,
+    label: name,
+  }
   if (req.body.otherUnit && req.body.otherUnit.length)
-    await synchronizeProductRelations(req.body.otherUnit, "otherUnit", _id)
+    await synchronizeProductRelations(req.body.otherUnit, "otherUnit", val)
   if (req.body.otherColor && req.body.otherColor.length)
-    await synchronizeProductRelations(req.body.otherColor, "otherColor", _id)
+    await synchronizeProductRelations(req.body.otherColor, "otherColor", val)
   if (req.body.otherFlavour && req.body.otherFlavour.length)
     await synchronizeProductRelations(
       req.body.otherFlavour,
       "otherFlavour",
-      _id
+      val
+    )
+  if (req.body.suggestedProduct && req.body.suggestedProduct.length)
+    await synchronizeProductRelations(
+      req.body.suggestedProduct,
+      "suggestedProduct",
+      val
     )
 
   const syncedProduct = await Product.findById({ _id })
@@ -116,28 +172,52 @@ const createProduct = asyncHandler(async (req, res) => {
 // @route   PUT /api/products/:id
 // @access  Private/Admin
 const updateProduct = asyncHandler(async (req, res) => {
-  const { files } = req
-  const { _id, otherUnit, otherColor, otherFlavour, suggestedProduct } =
-    req.body
+  const { files, image } = req
+  const {
+    _id,
+    otherUnit,
+    otherColor,
+    otherFlavour,
+    suggestedProduct,
+    updatedImageIds,
+  } = req.body
 
   // changes below are temporary needs to fix  later
-  image = await Promise.all(
+  const product = await Product.findById({ _id })
+  const newImages = await Promise.all(
     files &&
       files.map(async (file) => {
         const { key, url } = await awsService.uploadFile({ file })
         return { key, url }
       })
   )
+  // preserve image order
+  const imageUpdateOrder = JSON.parse(updatedImageIds) ?? []
+  if (imageUpdateOrder && updatedImageIds.length)
+    imageUpdateOrder.map((id) => product.image.splice(id, 1, newImages.shift()))
   req.body.otherUnit = JSON.parse(otherUnit)
   req.body.otherColor = JSON.parse(otherColor)
   req.body.otherFlavour = JSON.parse(otherFlavour)
   req.body.suggestedProduct = JSON.parse(suggestedProduct)
-  if (image.length) req.body.image = image
+  if (product.image.length) req.body.image = product.image
   req.body.user = req.user._id
-  const product = await Product.findOneAndUpdate({ _id }, req.body)
 
-  if (product) {
-    res.status(200).json(product)
+  console.log({ suggested: req.body.suggestedProduct })
+  const updatedProduct = await Product.findOneAndUpdate({ _id }, req.body)
+
+  if (req.body.otherUnit && req.body.otherUnit.length)
+    await synchronizeProductRelations(req.body.otherUnit, "otherUnit")
+  if (req.body.otherColor && req.body.otherColor.length)
+    await synchronizeProductRelations(req.body.otherColor, "otherColor")
+  if (req.body.otherFlavour && req.body.otherFlavour.length)
+    await synchronizeProductRelations(req.body.otherFlavour, "otherFlavour")
+  if (req.body.suggestedProduct && req.body.suggestedProduct.length)
+    await synchronizeProductRelations(
+      req.body.suggestedProduct,
+      "suggestedProduct"
+    )
+  if (updatedProduct) {
+    res.status(200).json(updatedProduct)
   } else {
     res.status(404)
     throw new Error("Product not found")

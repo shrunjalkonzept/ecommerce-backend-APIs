@@ -29,7 +29,7 @@ const awsService = {
           Expires: 604800,
         }
         const url = await s3.getSignedUrlPromise("getObject", getParams)
-        resolve({ url })
+        resolve({ url, key })
       })
     })
   },
