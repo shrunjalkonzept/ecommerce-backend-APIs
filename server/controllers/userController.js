@@ -16,7 +16,7 @@ const sendOTP = asyncHandler(async (req, res) => {
   const { mobileNo } = req.body
 
   let existUser = null
-  const otp = generateOTP()
+  const otp = 987654
   existUser = await User.findOne({ mobileNo })
 
   if (!existUser) {

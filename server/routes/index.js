@@ -3,6 +3,8 @@ const router = express.Router()
 // config routers
 require("./userRoutes")(router)
 require("./productRoutes")(router)
+require("./offerRoutes")(router)
+// keep last
 require("./brandAndCategoryRoutes")(router)
 
 module.exports = function (app) {

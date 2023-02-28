@@ -50,10 +50,15 @@ const productSchema = mongoose.Schema(
     },
     color: { type: String, default: null },
     nonVeg: { type: Boolean, default: false },
-    suggestedProduct: {
-      type: [],
-      default: [],
-    },
+    suggestedProduct: [
+      {
+        value: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+        label: { type: String },
+      },
+    ],
     mrp: {
       type: Number,
       required: true,

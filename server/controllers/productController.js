@@ -84,9 +84,10 @@ const getProducts = asyncHandler(async (req, res) => {
 // @access  Public
 const getProductById = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id)
-    .populate("otherFlavour.value", ["flavour", "image", "name"])
-    .populate("otherUnit.value", ["unit", "image", "name"])
-    .populate("otherColor.value", ["color", "image", "name"])
+    .populate("otherFlavour.value", ["flavour", "image", "name", "createdAt"])
+    .populate("otherUnit.value", ["unit", "image", "name", "createdAt"])
+    .populate("otherColor.value", ["color", "image", "name", "createdAt"])
+    .populate("suggestedProduct.value", ["image", "name", "createdAt"])
 
   if (product) {
     res.status(200).json(product)
