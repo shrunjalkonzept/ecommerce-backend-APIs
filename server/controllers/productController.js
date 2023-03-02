@@ -52,28 +52,64 @@ const blankImgArray = [
 // @access  Public
 const getProducts = asyncHandler(async (req, res) => {
   const pageSize = 10
-  const { pageNumber, filterBy, unit } = req.query
+  const { pageNumber, filterBy, unit, brand, sortBy, rating } = req.query
   const page = Number(pageNumber) || 1
   const weightUnits = ["kg", "gm"]
-  let keyword = {}
+  let keyword = [{ $match: { name: { $exists: true } } }]
   let count = null
   let products = []
 
-  if (filterBy) keyword = { [filterBy]: { $nin: ["", null] } }
-  if (unit)
-    if (weightUnits.includes(unit)) keyword = { unit: { $in: weightUnits } }
-    else keyword = { unit: { $in: ["pcs"] } }
+  // filter based on brand
+  if (brand) {
+    if (Array.isArray(brand))
+      keyword.push({ $match: { brand: { $in: brand } } })
+    else keyword.push({ $match: { brand: { $in: [brand] } } })
+  }
+  // filter based on user rating
+  if (rating) {
+    if (Array.isArray(rating))
+      keyword.push({ $match: { rating: { $in: rating.map(Number) } } })
+    else keyword.push({ $match: { rating: { $eq: Number(rating) } } })
+  }
 
-  if (Object.keys(keyword).length) {
-    count = await Product.countDocuments(keyword)
-    products = await Product.find(keyword).select({ name: 1 })
+  // sort by rating and cost
+  if (sortBy) {
+    switch (sortBy) {
+      case "ratingHighToLow":
+        keyword.push({ $sort: { rating: -1 } })
+        break
+      case "ratingLowToHigh":
+        keyword.push({ $sort: { rating: 1 } })
+        break
+      case "costHighToLow":
+        keyword.push({ $sort: { price: -1 } })
+        break
+      case "costHighLowToHigh":
+        keyword.push({ $sort: { price: 1 } })
+        break
+      default:
+        break
+    }
+  }
+  //recommendation  logic for creating product
+  if (unit || filterBy) {
+    let obj = {}
+    if (filterBy) obj = { [filterBy]: { $nin: ["", null] } }
+    if (unit) {
+      if (weightUnits.includes(unit)) obj = { unit: { $in: weightUnits } }
+      else obj = { unit: { $in: ["pcs"] } }
+    }
+    const products = await Product.find(obj).select({ name: 1 })
     const productOption = products.map((elem) => {
       return { value: elem._id, label: elem.name }
     })
     res.status(200).json(productOption)
   }
+  // keyword.push({
+  //   $project: { name: 1, brand: 1, unit: 1, price: 1, rating: 1 },
+  // })
   count = await Product.countDocuments()
-  products = await Product.find()
+  products = await Product.aggregate(keyword)
   res
     .status(200)
     .json({ data: products, page, pages: Math.ceil(count / pageSize) })
@@ -119,7 +155,6 @@ const createProduct = asyncHandler(async (req, res) => {
   const { files } = req
   const { otherUnit, otherColor, otherFlavour, suggestedProduct } = req.body
   // changes below are temporary needs to fix  later
-  console.log({ files })
   image = await Promise.all(
     files &&
       files.map(async (file) => {
@@ -139,25 +174,25 @@ const createProduct = asyncHandler(async (req, res) => {
   const product = new Product(req.body)
 
   const { _id, name } = await product.save()
-  const val = {
+  const obj = {
     value: _id,
     label: name,
   }
   if (req.body.otherUnit && req.body.otherUnit.length)
-    await synchronizeProductRelations(req.body.otherUnit, "otherUnit", val)
+    await synchronizeProductRelations(req.body.otherUnit, "otherUnit", obj)
   if (req.body.otherColor && req.body.otherColor.length)
-    await synchronizeProductRelations(req.body.otherColor, "otherColor", val)
+    await synchronizeProductRelations(req.body.otherColor, "otherColor", obj)
   if (req.body.otherFlavour && req.body.otherFlavour.length)
     await synchronizeProductRelations(
       req.body.otherFlavour,
       "otherFlavour",
-      val
+      obj
     )
   if (req.body.suggestedProduct && req.body.suggestedProduct.length)
     await synchronizeProductRelations(
       req.body.suggestedProduct,
       "suggestedProduct",
-      val
+      obj
     )
 
   const syncedProduct = await Product.findById({ _id })
@@ -181,6 +216,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     otherFlavour,
     suggestedProduct,
     updatedImageIds,
+    name,
   } = req.body
 
   // changes below are temporary needs to fix  later
@@ -195,7 +231,11 @@ const updateProduct = asyncHandler(async (req, res) => {
   // preserve image order
   const imageUpdateOrder = JSON.parse(updatedImageIds) ?? []
   if (imageUpdateOrder && updatedImageIds.length)
-    imageUpdateOrder.map((id) => product.image.splice(id, 1, newImages.shift()))
+    imageUpdateOrder.map(({ index, removed }) =>
+      removed
+        ? product.image.splice(index, 1, blankImgArray.shift())
+        : product.image.splice(index, 1, newImages.shift())
+    )
   req.body.otherUnit = JSON.parse(otherUnit)
   req.body.otherColor = JSON.parse(otherColor)
   req.body.otherFlavour = JSON.parse(otherFlavour)
@@ -203,20 +243,33 @@ const updateProduct = asyncHandler(async (req, res) => {
   if (product.image.length) req.body.image = product.image
   req.body.user = req.user._id
 
-  console.log({ suggested: req.body.suggestedProduct })
+  const obj = {
+    value: _id,
+    label: name,
+  }
+
+  await synchronizeProductRelations(req.body.otherUnit ?? [], "otherUnit", obj)
+
+  await synchronizeProductRelations(
+    req.body.otherColor ?? [],
+    "otherColor",
+    obj
+  )
+
+  await synchronizeProductRelations(
+    req.body.otherFlavour ?? [],
+    "otherFlavour",
+    obj
+  )
+
+  await synchronizeProductRelations(
+    req.body.suggestedProduct ?? [],
+    "suggestedProduct",
+    obj
+  )
+
   const updatedProduct = await Product.findOneAndUpdate({ _id }, req.body)
 
-  if (req.body.otherUnit && req.body.otherUnit.length)
-    await synchronizeProductRelations(req.body.otherUnit, "otherUnit")
-  if (req.body.otherColor && req.body.otherColor.length)
-    await synchronizeProductRelations(req.body.otherColor, "otherColor")
-  if (req.body.otherFlavour && req.body.otherFlavour.length)
-    await synchronizeProductRelations(req.body.otherFlavour, "otherFlavour")
-  if (req.body.suggestedProduct && req.body.suggestedProduct.length)
-    await synchronizeProductRelations(
-      req.body.suggestedProduct,
-      "suggestedProduct"
-    )
   if (updatedProduct) {
     res.status(200).json(updatedProduct)
   } else {

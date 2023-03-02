@@ -37,7 +37,10 @@ const productSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
-
+    isTrending: {
+      type: Boolean,
+      default: false,
+    },
     flavour: {
       type: String,
       default: null,

@@ -17,7 +17,7 @@ const getBrandsAndCategory = asyncHandler(async (req, res) => {
   // const data = await BrandAndCategory.find({ type })
   //   .limit(pageSize)
   //   .skip(pageSize * (page - 1))
-  res.json({ data, page, pages: Math.ceil(count / pageSize) })
+  res.status(200).json({ data, page, pages: Math.ceil(count / pageSize) })
 })
 
 // @desc    Fetch all products
@@ -32,15 +32,20 @@ const createBrandsAndCategory = asyncHandler(async (req, res) => {
     res.status(400)
     throw new Error(`${type} already exist`)
   } else {
-    const result = await awsService.uploadFile(req)
-    const brandAndCategory = new BrandAndCategory({
-      name,
-      type,
-      image: result.url,
-    })
+    if (req.file) {
+      const result = await awsService.uploadFile(req)
+      const brandAndCategory = new BrandAndCategory({
+        name,
+        type,
+        image: result.url,
+      })
+      const createdBrandAndCategory = await brandAndCategory.save()
+      res.status(201).json(createdBrandAndCategory)
+    } else {
+      res.status(400)
+      throw new Error(`Image is required`)
+    }
     // const presigned = await awsService.getPreSignedURL(result.Key)
-    const createdBrandAndCategory = await brandAndCategory.save()
-    res.status(201).json(createdBrandAndCategory)
   }
 })
 
@@ -59,7 +64,7 @@ const updateBrandsAndCategory = asyncHandler(async (req, res) => {
     }
     result.name = name
     await result.save()
-    res.status(201).json(result)
+    res.status(200).json(result)
   } else {
     res.status(404)
     throw new Error(`No ${type} found`)
@@ -76,7 +81,7 @@ const deleteBrandsAndCategory = asyncHandler(async (req, res) => {
   const result = await BrandAndCategory.findOne({ _id })
   if (result) {
     await result.remove()
-    res.status(201).json({ success: true, message: `${type} removed` })
+    res.status(200).json({ success: true, message: `${type} removed` })
   } else {
     res.status(404)
     throw new Error(`No ${type} found`)

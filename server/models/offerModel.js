@@ -9,7 +9,10 @@ const offerSchema = mongoose.Schema(
       key: { type: String, required: true },
     },
     validTill: { type: String, required: true },
-    percentage: { type: String, required: true },
+    discountType: {
+      label: { type: String, required: true },
+      value: { type: String, required: true },
+    },
     value: { type: String, required: true },
     description: { type: String, required: true },
   },

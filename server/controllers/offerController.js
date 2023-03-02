@@ -31,10 +31,13 @@ const getOfferById = asyncHandler(async (req, res) => {
 // @route   PUT /api/offer/:id
 // @access  Private
 const updateOffer = asyncHandler(async (req, res) => {
+  const { discountType } = req.body
   const { _id } = req.params
   let image
   if (req.file && req.file.path) image = await awsService.uploadFile(req)
   if (image) req.body.image = image
+  req.body.discountType = JSON.parse(discountType)
+
   const response = await Offer.findOneAndUpdate({ _id }, req.body, {
     new: true,
   })
@@ -64,7 +67,7 @@ const deleteOffer = asyncHandler(async (req, res) => {
 // @route   POST /api/offer/:id
 // @access  Private
 const createOffer = asyncHandler(async (req, res) => {
-  const { title, validTill, percentage, value, description } = req.body
+  const { title, validTill, discountType, value, description } = req.body
   let image
 
   if (req.file && req.file.path) image = await awsService.uploadFile(req)
@@ -74,13 +77,13 @@ const createOffer = asyncHandler(async (req, res) => {
       title,
       image,
       validTill,
-      percentage,
+      discountType: JSON.parse(discountType),
       value,
       description,
     })
     const response = await newOffer.save()
     if (response) {
-      res.status(200).send(response)
+      res.status(201).send(response)
     } else {
       res.status(404).send("something went wrong")
     }
