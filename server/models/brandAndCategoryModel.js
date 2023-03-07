@@ -3,7 +3,7 @@ const mongoose = require("mongoose")
 const brandAndCategorySchema = mongoose.Schema(
   {
     name: { type: String, required: true },
-    image: { type: String },
+    image: {},
     type: {
       type: String,
       enum: ["category", "brand"],

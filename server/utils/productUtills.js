@@ -69,4 +69,43 @@ const synchronizeProductRelations = async (records = [], dataToSync, obj) => {
   }
 }
 
-module.exports = { synchronizeProductRelations }
+const calculateTotal = (products) => {
+  const elementCounts = { mrp: 0, price: 0 }
+  products.forEach(({ value, qty }) => {
+    elementCounts["mrp"] = elementCounts["mrp"] + Number(value.mrp) * qty
+    elementCounts["price"] = elementCounts["price"] + Number(value.price) * qty
+  })
+  return elementCounts
+}
+
+const countCartTotal = (products) => {
+  const elementCounts = {}
+
+  products.forEach((elem) => {
+    const {
+      value: { _id },
+    } = elem
+    elementCounts[_id.toString()] =
+      (elementCounts[_id.toString()] || 0) + elem.qty
+  })
+
+  const updatedProducts = []
+  Object.keys(elementCounts).map((elem) => {
+    if (elementCounts[elem.toString()] > 0)
+      updatedProducts.push({
+        value: elem,
+        qty: elementCounts[elem.toString()],
+      })
+  })
+  const { mrp, price } = calculateTotal(products)
+
+  return {
+    products: updatedProducts,
+    total: price,
+    subTotal: mrp,
+    discount: mrp - price,
+    tax: 0,
+  }
+}
+
+module.exports = { synchronizeProductRelations, countCartTotal }

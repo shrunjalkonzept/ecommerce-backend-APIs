@@ -19,7 +19,7 @@ module.exports = (router) => {
   // private Routes
   router
     .route("/:type")
-    .get(protect, getBrandsAndCategory)
+    .get(getBrandsAndCategory)
     .post(protect, upload.single("image"), createBrandsAndCategory)
     .put(protect, upload.single("image"), updateBrandsAndCategory)
     .delete(protect, deleteBrandsAndCategory)

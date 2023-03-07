@@ -4,6 +4,7 @@ const router = express.Router()
 require("./userRoutes")(router)
 require("./productRoutes")(router)
 require("./offerRoutes")(router)
+require("./blogRoutes")(router)
 // keep last
 require("./brandAndCategoryRoutes")(router)
 

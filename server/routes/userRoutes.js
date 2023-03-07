@@ -7,6 +7,11 @@ const {
     authUser,
     changePassword,
     resetUserPassword,
+    addProductToCart,
+    removeProductFromCart,
+    addProductToWishList,
+    removeProductFromWishList,
+    updateUserDetails,
   },
 } = require("../controllers")
 const { protect, admin } = require("../middleware/authMiddleware.js")
@@ -28,6 +33,17 @@ module.exports = (router) => {
   router.route("/user/password/:token").post(resetUserPassword)
 
   // private Routes
-  router.route("/user/profile").get(protect, getUserDetails)
+  router
+    .route("/user/profile")
+    .get(protect, getUserDetails)
+    .post(protect, updateUserDetails)
   router.route("/user/password").put(protect, changePassword)
+  router
+    .route("/user/cart/:productId")
+    .post(protect, addProductToCart)
+    .put(protect, removeProductFromCart)
+  router
+    .route("/user/wishlist/:productId")
+    .post(protect, addProductToWishList)
+    .put(protect, removeProductFromWishList)
 }

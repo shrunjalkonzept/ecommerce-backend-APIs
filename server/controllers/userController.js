@@ -7,6 +7,9 @@ const generateToken = require("../utils/generateToken.js")
 const User = require("../models/userModel.js")
 const { sendOtpToMobile, generateOTP } = require("../utils/smsService.js")
 const expressAsyncHandler = require("express-async-handler")
+const { countCartTotal } = require("../utils/productUtills.js")
+const Product = require("../models/productModel.js")
+const { forEach, map } = require("lodash")
 const saltRounds = 10
 
 // @desc    Auth user & get OTP
@@ -22,7 +25,6 @@ const sendOTP = asyncHandler(async (req, res) => {
   if (!existUser) {
     // create new user if not found
     existUser = await User.create({
-      name: uniqueNamesGenerator({ dictionaries: [names] }),
       mobileNo,
     })
   }
@@ -161,7 +163,6 @@ const registerUser = asyncHandler(async (req, res) => {
     res.status(400).send("number is already registered")
   } else {
     const newUser = await User.create({
-      name: uniqueNamesGenerator({ dictionaries: [names] }),
       password: passwordHash,
       mobileNo,
     })
@@ -176,14 +177,215 @@ const registerUser = asyncHandler(async (req, res) => {
 })
 
 // @desc   getUserDetails
-// @route   POST /api/users/profile
+// @route   GET /api/users/profile
 // @access  Protected
 const getUserDetails = asyncHandler(async (req, res) => {
-  const { user } = req
-  if (user) res.status(200).json(user)
-  else {
+  const { _id } = req.user
+  const user = await User.findById(_id)
+    .populate("cart.products.value", ["mrp", "price", "image"])
+    .populate("wishList", ["mrp", "price", "image"])
+  if (user) {
+    res.status(200).send(user)
+  } else {
     res.status(404)
     throw new Error("User not found")
+  }
+})
+
+// @desc   getUserDetails
+// @route   GET /api/users/profile
+// @access  Protected
+const updateUserDetails = asyncHandler(async (req, res) => {
+  const { _id } = req.user
+
+  const user = await User.findOneAndUpdate({ _id }, req.body, { new: true })
+    .populate("cart.products.value", ["mrp", "price", "image"])
+    .populate("wishList", ["mrp", "price", "image"])
+  if (user) {
+    res
+      .status(200)
+      .send({ data: user, message: "profile updated successfully" })
+  } else {
+    res.status(404)
+    throw new Error("User not found")
+  }
+})
+
+const addProductToCart = asyncHandler(async (req, res) => {
+  const { productId } = req.params
+  const {
+    user: { _id },
+  } = req
+
+  const userCart = await User.findById(_id).populate("cart.products.value", [
+    "mrp",
+    "price",
+  ])
+  if (userCart) {
+    const product = await Product.findById(productId).select([
+      "mrp",
+      "price",
+      "image",
+    ])
+    const {
+      cart: { products },
+    } = userCart
+    if (product) {
+      let list = products || []
+
+      list.push({
+        value: { _id: product._id, mrp: product.mrp, price: product.price },
+        qty: 1,
+        new: true,
+      })
+      const cart = countCartTotal(list)
+      const updatedCart = await User.findOneAndUpdate(
+        { _id },
+        { $set: { cart } },
+        { new: true }
+      )
+        .populate("cart.products.value", ["mrp", "price", "image"])
+        .select({ cart: 1 })
+      if (updatedCart) {
+        res
+          .status(200)
+          .send({ data: updatedCart, message: "Item added to cart" })
+        res.status(400)
+        throw new Error("something went wrong")
+      }
+    } else {
+      res.status(400)
+      throw new Error("product not found")
+    }
+  } else {
+    res.status(400)
+    throw new Error("userCart not found")
+  }
+})
+
+const removeProductFromCart = asyncHandler(async (req, res) => {
+  const { productId } = req.params
+  const {
+    user: { _id },
+  } = req
+
+  const userCart = await User.findById(_id)
+    .populate("cart.products.value", ["mrp", "price", "image"])
+    .select({ cart: 1 })
+  if (userCart) {
+    const {
+      cart: { products },
+    } = userCart
+
+    if (products.length) {
+      const product = await Product.findById(productId)
+      if (product) {
+        forEach(products, (product) => {
+          const {
+            value: { _id },
+          } = product
+          if (_id.toString() === productId && product.qty > 0)
+            product.qty = product.qty - 1
+
+          return product
+        })
+        const cart = countCartTotal(products)
+        const updatedCart = await User.findOneAndUpdate(
+          { _id },
+          { $set: { cart } },
+          { new: true }
+        )
+          .populate("cart.products.value", ["mrp", "price", "image"])
+          .select({ cart: 1 })
+        if (updatedCart) {
+          res
+            .status(200)
+            .send({ data: updatedCart, message: "Item removed from cart" })
+        } else {
+          res.status(400)
+          throw new Error("something went wrong")
+        }
+      } else {
+        res.status(400)
+        throw new Error("product not found")
+      }
+    } else {
+      res.status(400)
+      throw new Error("cart is empty")
+    }
+  } else {
+    res.status(400)
+    throw new Error("userCart not found")
+  }
+})
+
+const addProductToWishList = asyncHandler(async (req, res) => {
+  const { productId } = req.params
+  const { _id } = req.user
+  const user = await User.findById(_id)
+  if (user) {
+    const { wishList } = user
+    console.log({ wishList })
+    const newWishList = wishList ?? []
+    // check if product is already in list or not
+    const idExist = newWishList.find((pid) => pid.toString() === productId)
+    if (idExist) {
+      res.status(400)
+      throw new Error("product Already in Wishlist")
+    } else {
+      newWishList.push(productId)
+      const response = await User.findOneAndUpdate(
+        { _id },
+        { $set: { wishList: newWishList } },
+        { new: true }
+      )
+        .populate("wishList", [
+          "name",
+          "price",
+          "mrp",
+          "rating",
+          "image",
+          "description",
+        ])
+        .select("wishlist")
+      res
+        .status(200)
+        .send({ data: response, message: "product added to wishlist" })
+    }
+  } else {
+    res.status(400)
+    throw new Error("user not found")
+  }
+})
+
+const removeProductFromWishList = asyncHandler(async (req, res) => {
+  const { productId } = req.params
+  const { _id } = req.user
+  const user = await User.findById(_id)
+  if (user) {
+    const { wishList } = user
+    let newWishList = wishList ?? []
+    newWishList = newWishList.filter((pid) => pid.toString() !== productId)
+    const response = await User.findOneAndUpdate(
+      { _id },
+      { $set: { wishList: newWishList } },
+      { new: true }
+    )
+      .populate("wishList", [
+        "name",
+        "price",
+        "mrp",
+        "rating",
+        "image",
+        "description",
+      ])
+      .select("wishlist")
+    res
+      .status(200)
+      .send({ data: response, message: "product removed from wishlist" })
+  } else {
+    res.status(400)
+    throw new Error("user not found")
   }
 })
 
@@ -195,4 +397,9 @@ module.exports = {
   authUser,
   resetUserPassword,
   changePassword,
+  addProductToCart,
+  addProductToWishList,
+  removeProductFromWishList,
+  removeProductFromCart,
+  updateUserDetails,
 }

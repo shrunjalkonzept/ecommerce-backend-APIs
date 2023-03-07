@@ -9,6 +9,7 @@ const {
     getTopProducts,
     getProducts,
     getRelevantProducts,
+    getHomeScreenData,
   },
 } = require("../controllers")
 const { protect } = require("../middleware/authMiddleware.js")
@@ -21,6 +22,7 @@ module.exports = (router) => {
   // public routes
   router.get("/product/top", getTopProducts)
   router.get("/product/relevant", getRelevantProducts)
+  router.get("/product/home", getHomeScreenData)
 
   // private Routes
   router
@@ -44,4 +46,5 @@ module.exports = (router) => {
       deleteProduct
     )
     .put(protect, upload.array("image"), updateProduct)
+  router.route("/product/:id/review").post(protect, createProductReview)
 }

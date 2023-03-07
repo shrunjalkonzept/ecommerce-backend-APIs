@@ -3,6 +3,7 @@ const Product = require("../models/productModel.js")
 const { synchronizeProductRelations } = require("../utils/productUtills.js")
 const awsService = require("../utils/aws")
 const { map } = require("lodash")
+const BrandAndCategory = require("../models/brandAndCategoryModel.js")
 
 const blankImgArray = [
   {
@@ -338,6 +339,31 @@ const getRelevantProducts = asyncHandler(async (req, res) => {
 
   res.status(200).json(products)
 })
+
+const getHomeScreenData = asyncHandler(async (req, res) => {
+  const brands = await BrandAndCategory.find({ type: "brand" }).select([
+    "image",
+    "name",
+    "type",
+  ])
+  const category = await BrandAndCategory.find({ type: "category" }).select([
+    "image",
+    "name",
+    "type",
+  ])
+  const newArrivals = await Product.find({})
+    .sort({ createdAt: -1 })
+    .select(["name", "price", "mrp", "rating", "image", "description"])
+  const trendingProducts = await Product.find({ isTrending: true }).select([
+    "name",
+    "price",
+    "mrp",
+    "rating",
+    "image",
+    "description",
+  ])
+  res.status(200).json({ brands, category, newArrivals, trendingProducts })
+})
 module.exports = {
   getProducts,
   getProductById,
@@ -347,4 +373,5 @@ module.exports = {
   createProductReview,
   getTopProducts,
   getRelevantProducts,
+  getHomeScreenData,
 }

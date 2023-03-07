@@ -15,11 +15,11 @@ module.exports = (router) => {
   //private routes
   router
     .route("/offer")
-    .get(protect, getOffer)
+    .get(getOffer)
     .post(protect, upload.single("image"), createOffer)
   router
     .route("/offer/:_id")
-    .get(protect, getOfferById)
+    .get(getOfferById)
     .put(protect, upload.single("image"), updateOffer)
     .delete(protect, deleteOffer)
 }

@@ -2,12 +2,15 @@ const mongoose = require("mongoose")
 
 const userSchema = mongoose.Schema(
   {
-    name: {
+    firstName: {
       type: String,
-      required: true,
+      default: "GymCart",
     },
+    lastName: { type: String, default: "User" },
+    Description: { type: String, default: "" },
     email: {
       type: String,
+      default: "",
     },
     password: {
       type: String,
@@ -26,9 +29,45 @@ const userSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    cart: {
+      products: [
+        {
+          value: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Product",
+          },
+          qty: {
+            type: Number,
+            default: 0,
+          },
+        },
+      ],
+      subTotal: {
+        type: Number,
+        default: 0,
+      },
+      discount: {
+        type: Number,
+        default: 0,
+      },
+      tax: {
+        type: Number,
+        default: 0,
+      },
+      total: {
+        type: Number,
+        default: 0,
+      },
+    },
+    wishList: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+      },
+    ],
     otp: {
       type: Number,
-      default:null
+      default: null,
     },
   },
   {
