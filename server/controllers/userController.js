@@ -13,7 +13,7 @@ const { forEach, map } = require("lodash")
 const saltRounds = 10
 
 // @desc    Auth user & get OTP
-// @route   POST /api/users/generate-otp
+// @route   POST /api/user/generate-otp
 // @access  Public
 const sendOTP = asyncHandler(async (req, res) => {
   const { mobileNo } = req.body
@@ -44,7 +44,7 @@ const sendOTP = asyncHandler(async (req, res) => {
 })
 
 // @desc    verify OTP
-// @route   POST /api/users/verify-otp
+// @route   POST /api/user/verify-otp
 // @access  Public
 const verifyOTP = asyncHandler(async (req, res) => {
   const { mobileNo, otp, resetPass } = req.body
@@ -70,7 +70,7 @@ const verifyOTP = asyncHandler(async (req, res) => {
 })
 
 // @desc   resetUserDetails
-// @route   POST /api/users/reset-password
+// @route   POST /api/user/reset-password
 // @access  public
 const resetUserPassword = expressAsyncHandler(async (req, res) => {
   const { token } = req.params
@@ -100,7 +100,7 @@ const resetUserPassword = expressAsyncHandler(async (req, res) => {
 })
 
 // @desc   resetUserDetails
-// @route   PUT /api/users/reset-password
+// @route   PUT /api/user/reset-password
 // @access  Private
 const changePassword = expressAsyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body
@@ -126,7 +126,7 @@ const changePassword = expressAsyncHandler(async (req, res) => {
 })
 
 // @desc   auth user
-// @route   POST /api/users/login
+// @route   POST /api/user/login
 // @access  Public
 const authUser = asyncHandler(async (req, res) => {
   const { mobileNo, password } = req.body
@@ -150,7 +150,7 @@ const authUser = asyncHandler(async (req, res) => {
 })
 
 // @desc   register user
-// @route   POST /api/users/register
+// @route   POST /api/user/register
 // @access  Public
 const registerUser = asyncHandler(async (req, res) => {
   const { password, mobileNo } = req.body
@@ -177,7 +177,7 @@ const registerUser = asyncHandler(async (req, res) => {
 })
 
 // @desc   getUserDetails
-// @route   GET /api/users/profile
+// @route   GET /api/user/profile
 // @access  Protected
 const getUserDetails = asyncHandler(async (req, res) => {
   const { _id } = req.user
@@ -190,10 +190,11 @@ const getUserDetails = asyncHandler(async (req, res) => {
     res.status(404)
     throw new Error("User not found")
   }
+  ;/user/
 })
 
 // @desc   getUserDetails
-// @route   GET /api/users/profile
+// @route   GET /api/user/profile
 // @access  Protected
 const updateUserDetails = asyncHandler(async (req, res) => {
   const { _id } = req.user
@@ -211,6 +212,9 @@ const updateUserDetails = asyncHandler(async (req, res) => {
   }
 })
 
+// @desc   add product to cart
+// @route   GET /api/user/cart/:productId
+// @access  Protected
 const addProductToCart = asyncHandler(async (req, res) => {
   const { productId } = req.params
   const {
@@ -263,6 +267,9 @@ const addProductToCart = asyncHandler(async (req, res) => {
   }
 })
 
+// @desc   remove product to cart
+// @route   PUT /api/user/cart/:productId
+// @access  Protected
 const removeProductFromCart = asyncHandler(async (req, res) => {
   const { productId } = req.params
   const {
@@ -319,6 +326,9 @@ const removeProductFromCart = asyncHandler(async (req, res) => {
   }
 })
 
+// @desc   add product to Wishlist
+// @route   POST /api/user/cart/:productId
+// @access  Protected
 const addProductToWishList = asyncHandler(async (req, res) => {
   const { productId } = req.params
   const { _id } = req.user
@@ -358,6 +368,9 @@ const addProductToWishList = asyncHandler(async (req, res) => {
   }
 })
 
+// @desc   remove product from Wishlist
+// @route   PUT /api/user/cart/:productId
+// @access  Protected
 const removeProductFromWishList = asyncHandler(async (req, res) => {
   const { productId } = req.params
   const { _id } = req.user

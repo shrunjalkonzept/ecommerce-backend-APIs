@@ -340,6 +340,9 @@ const getRelevantProducts = asyncHandler(async (req, res) => {
   res.status(200).json(products)
 })
 
+// @desc    Get HomeScreen details
+// @route   GET /api/products/
+// @access  public
 const getHomeScreenData = asyncHandler(async (req, res) => {
   const brands = await BrandAndCategory.find({ type: "brand" }).select([
     "image",

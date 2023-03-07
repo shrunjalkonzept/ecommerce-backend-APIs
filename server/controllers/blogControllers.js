@@ -2,6 +2,9 @@ const asyncHandler = require("express-async-handler")
 const awsService = require("../utils/aws")
 const Blog = require("../models/blogModel")
 
+// @desc    Create Blog
+// @route   POST /api/blog
+// @access  Private
 const createBlog = asyncHandler(async (req, res) => {
   const { _id } = req.user
   const { title, description } = req.body
@@ -20,7 +23,9 @@ const createBlog = asyncHandler(async (req, res) => {
     throw new Error(`Image is required`)
   }
 })
-
+// @desc    Fetch all blogs
+// @route   GET /api/blog
+// @access  Public
 const getBlogs = asyncHandler(async (req, res) => {
   const response = await Blog.find({})
   if (response) {
@@ -31,6 +36,9 @@ const getBlogs = asyncHandler(async (req, res) => {
   }
 })
 
+// @desc    update Blog
+// @route   PUT /api/blog/:blogId
+// @access  Public
 const updateBlog = asyncHandler(async (req, res) => {
   const { blogId } = req.params
   const { title, description, img } = req.body
@@ -52,6 +60,9 @@ const updateBlog = asyncHandler(async (req, res) => {
   }
 })
 
+// @desc    get Blog by id
+// @route   GET /api/blog/:blogId
+// @access  Public
 const getBlogById = asyncHandler(async (req, res) => {
   const { blogId } = req.params
   const blog = await Blog.findById(blogId)
@@ -63,6 +74,9 @@ const getBlogById = asyncHandler(async (req, res) => {
   }
 })
 
+// @desc    delete Blog by id
+// @route   Delete /api/blog/:blogId
+// @access  Public
 const deleteBlogById = asyncHandler(async (req, res) => {
   const { blogId } = req.params
   const response = await Blog.findByIdAndDelete(blogId)
